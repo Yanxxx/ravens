@@ -26,6 +26,7 @@ import numpy as np
 from ravens.tasks import cameras
 from ravens.tasks import primitives
 from ravens.tasks.grippers import Suction
+from ravens.tasks.grippers import Bucket
 from ravens.utils import utils
 
 import pybullet as p
@@ -35,7 +36,8 @@ class Task():
   """Base Task class."""
 
   def __init__(self):
-    self.ee = Suction
+#    self.ee = Suction
+    self.ee = Bucket
     self.mode = 'train'
     self.sixdof = False
     self.primitive = primitives.PickPlace()
