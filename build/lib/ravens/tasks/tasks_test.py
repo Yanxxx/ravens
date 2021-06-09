@@ -76,6 +76,10 @@ class TaskTest(parameterized.TestCase):
   ), (
       'TowersOfHanoi',
       tasks.TowersOfHanoi(),
+  ),
+    (
+      'Excavation',
+      tasks.Excavation(),
   ))
   def test_all_tasks(self, ravens_task):
     env = self._create_env()

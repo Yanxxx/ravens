@@ -45,6 +45,7 @@ def main(unused_argv):
       disp=FLAGS.disp,
       shared_memory=FLAGS.shared_memory,
       hz=480)
+#  print(tasks.names['excavation'])
   task = tasks.names[FLAGS.task]()
   task.mode = FLAGS.mode
 

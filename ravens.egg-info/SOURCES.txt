@@ -39,6 +39,7 @@ ravens/tasks/align_box_corner.py
 ravens/tasks/assembling_kits.py
 ravens/tasks/block_insertion.py
 ravens/tasks/cameras.py
+ravens/tasks/excavation.py
 ravens/tasks/grippers.py
 ravens/tasks/manipulating_rope.py
 ravens/tasks/packing_boxes.py
