@@ -63,6 +63,8 @@ class Environment(gym.Env):
     self.agent_cams = cameras.RealSenseD415.CONFIG
 
     self.assets_root = assets_root
+    self.episode_steps = 0
+    self.joint_space_cmd = self.homej
 
     color_tuple = [
         gym.spaces.Box(0, 255, config['image_size'] + (3,), dtype=np.uint8)
@@ -90,6 +92,15 @@ class Environment(gym.Env):
             gym.spaces.Tuple(
                 (self.position_bounds,
                  gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32)))
+    })
+            
+    self.action_space_single_move = gym.spaces.Dict({
+        'pose':
+            gym.spaces.Tuple(
+                (self.position_bounds,
+                 gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32))),
+        'grasp':
+            gym.spaces.Discrete(2)
     })
 
     # Start PyBullet.
@@ -198,6 +209,50 @@ class Environment(gym.Env):
 
     obs, _, _, _ = self.step()
     return obs
+
+  def step_single(self, action = None):
+    if action:
+      self.episode_steps += 1
+      ee_pose = action['pose']
+      grasp = action['grasp']
+      self.joint_space_cmd = self.solve_ik(ee_pose)
+      self.movj_speed_control(self.joint_space_cmd)
+      #self.movej_fast(joint_position)
+      #self.movep(ee_pose)
+      if grasp == 1:
+          self.ee.activate()
+      else:
+          self.ee.release()
+      marker_head_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]]
+      marker_tail_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]+0.1]
+      p.addUserDebugLine(marker_head_point,
+                         marker_tail_point,
+                         lineColorRGB=[1, 0, 0],
+                         lifeTime=10,
+                         lineWidth=3)
+    else:
+      self.movj_speed_control(self.joint_space_cmd, speed=0.1)
+
+
+      #while not self.is_static:
+    p.stepSimulation()
+# Get task rewards.
+    reward, info = self.task.reward() if action is not None else (0, {})
+    done = self.task.done()
+
+    if self.ee.check_grasp() == True:
+      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+      done = True
+      reward = 1
+      self.reset()
+
+  # Add ground truth robot state into info.
+    info.update(self.info)
+
+    obs = self._get_obs()
+  #obs = None
+    return obs, reward, done, info
+  
 
   def step(self, action=None):
     """Execute action with specified primitive.
@@ -322,7 +377,27 @@ class Environment(gym.Env):
   #---------------------------------------------------------------------------
   # Robot Movement Functions
   #---------------------------------------------------------------------------
-
+  def movj_speed_control(self, targj, speed = 7.0):
+    currj = [p.getJointState(self.ur5, i)[0] for i in self.joints]
+    currj = np.array(currj)
+    diffj = targj - currj
+    if all(np.abs(diffj) < 0.1):
+      return False
+    
+    norm = np.linalg.norm(diffj)
+    v = diffj / norm if norm > 0 else 0
+    stepj = diffj * speed
+    
+    gains = np.ones(len(self.joints))
+    p.setJointMotorControlArray(
+        bodyIndex=self.ur5,
+        jointIndices=self.joints,
+        controlMode=p.VELOCITY_CONTROL,
+        targetVelocities=stepj,
+        velocityGains=gains)
+    p.stepSimulation()
+      
+      
   def movej(self, targj, speed=0.01, timeout=5):
     """Move UR5 to target joint configuration."""
     t0 = time.time()

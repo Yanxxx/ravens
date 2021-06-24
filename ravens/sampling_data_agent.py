@@ -40,8 +40,8 @@ FLAGS = flags.FLAGS
 def interpolateAct(act):
   if not act:
       return []
-  step_resolution = 0.005
-  init_pose = ([0.4, 0, 0.4], [1, 0, 0, 0])
+  step_resolution = 0.01
+  init_pose = ([0.46562498807907104, -0.375, 0.3599780201911926], [0, 0, 0, 1])
   act_tmp = []
 #  act_tmp['pose0'] = init_pose
 #  act_tmp['pose1'] = act['pose0']
@@ -53,19 +53,21 @@ def interpolateAct(act):
 #  print(type(act), act)
 #  act.insert(0, init_pose)
   result = []
+  q = [0, 0, 0, 1]
   for i in range(len(act_tmp) - 1):
       result.append(act_tmp[i])
       p1 = act_tmp[i][0]
       p2 = act_tmp[i+1][0]
-      q1 = act_tmp[i][1]
-      q2 = act_tmp[i+1][1]
+#      q1 = act_tmp[i][1]
+#      q2 = act_tmp[i+1][1]
       d = np.linalg.norm(p2 - p1)
       step = int(np.round(d / step_resolution))
       print('step=:', step)
       position = (p2-p1)/step
-      pose = (q2 - q1)/step
+#      pose = (q2 - q1)/step
       for j in range(step - 1):
-          result.append((p1 + position * (j + 1), q1 + pose * (j + 1)))
+#          result.append((p1 + position * (j + 1), q1 + pose * (j + 1)))
+          result.append((p1 + position * (j + 1), q))
   return result
 
 
@@ -108,9 +110,12 @@ def main(unused_argv):
 #      print(actions)
       episode.append((obs, act, reward, info))
       for a in actions:
+          atmp = {}
           episode.append((obs, a, reward, info))
 #          obs, reward, done, info = env.step_simple(act)
-          obs, reward, done, info = env.step(actions)
+          atmp['pose'] = a
+          atmp['grasp'] = 0
+          obs, reward, done, info = env.step_single(atmp)
           total_reward += reward
       print(f'Total Reward: {total_reward} Done: {done}')
       if done:
