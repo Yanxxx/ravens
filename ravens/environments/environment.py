@@ -24,6 +24,7 @@ import numpy as np
 from ravens.tasks import cameras
 from ravens.utils import pybullet_utils
 from ravens.utils import utils
+from ravens.tasks.trace_execution import Trace
 
 import pybullet as p
 
@@ -209,6 +210,34 @@ class Environment(gym.Env):
 
     obs, _, _, _ = self.step()
     return obs
+
+  def step_move(self, action = None):
+    if action:
+      trace = Trace()
+      self.episode_steps += 1
+      timeout, pose = trace(self.movej, self.movep, self.ee, action)
+#      ee_pose = action['pose']
+##      print('**********', ee_pose)
+#      grasp = action['grasp']
+#      self.movep(ee_pose)
+      #while not self.is_static:
+    while not self.is_static:
+      p.stepSimulation()
+# Get task rewards.
+    reward, info = self.task.reward() if action is not None else (0, {})
+    done = self.task.done()
+
+    if self.ee.check_grasp() == True:
+      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+      done = True
+#      reward = 1
+#      self.reset()
+  # Add ground truth robot state into info.
+    info.update(self.info)
+
+    obs = self._get_obs()
+  #obs = None
+    return obs, reward, done, info
 
   def step_single(self, action = None):
     if action:

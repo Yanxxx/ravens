@@ -25,6 +25,8 @@ import numpy as np
 from ravens import tasks
 from ravens.dataset import Dataset
 from ravens.environments.environment import Environment
+from ravens.utils import utils
+from trace_generator import TraceGenerator
 
 flags.DEFINE_string('assets_root', '.', '')
 flags.DEFINE_string('data_dir', '.', '')
@@ -37,38 +39,12 @@ flags.DEFINE_integer('n', 1000, '')
 FLAGS = flags.FLAGS
 
 
-def interpolateAct(act):
-  if not act:
-      return []
-  step_resolution = 0.01
-  init_pose = ([0.46562498807907104, -0.375, 0.3599780201911926], [0, 0, 0, 1])
-  act_tmp = []
-#  act_tmp['pose0'] = init_pose
-#  act_tmp['pose1'] = act['pose0']
-#  act_tmp['pose2'] = act['pose1']
-  act_tmp.append(init_pose)
-  act_tmp.append(act['pose0'])
-  act_tmp.append(act['pose1'])
-  
-#  print(type(act), act)
-#  act.insert(0, init_pose)
-  result = []
-  q = [0, 0, 0, 1]
-  for i in range(len(act_tmp) - 1):
-      result.append(act_tmp[i])
-      p1 = act_tmp[i][0]
-      p2 = act_tmp[i+1][0]
-#      q1 = act_tmp[i][1]
-#      q2 = act_tmp[i+1][1]
-      d = np.linalg.norm(p2 - p1)
-      step = int(np.round(d / step_resolution))
-      print('step=:', step)
-      position = (p2-p1)/step
-#      pose = (q2 - q1)/step
-      for j in range(step - 1):
-#          result.append((p1 + position * (j + 1), q1 + pose * (j + 1)))
-          result.append((p1 + position * (j + 1), q))
-  return result
+assets_root = "/home/yan/git/ravens/ravens/environments/assets/"
+dataset_root = "/data/ravens_demo/"
+#task_name = "place-red-in-green"
+task_name = "block-insertion-nofixture"
+mode = "train"
+FLAGS = flags.FLAGS
 
 
 def main(unused_argv):
@@ -92,6 +68,8 @@ def main(unused_argv):
   if seed < 0:
     seed = -1 if (task.mode == 'test') else -2
 
+  trace_generator = TraceGenerator()
+
   # Collect training data from oracle demonstrations.
   while dataset.n_episodes < FLAGS.n:
     print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')
@@ -106,17 +84,29 @@ def main(unused_argv):
       act = agent.act(obs, info)      
       if not act:
           continue
-      actions = interpolateAct(act)
+      actions = trace_generator(act)
 #      print(actions)
       episode.append((obs, act, reward, info))
       for a in actions:
-          atmp = {}
-          episode.append((obs, a, reward, info))
+#          atmp = {}
 #          obs, reward, done, info = env.step_simple(act)
-          atmp['pose'] = a
-          atmp['grasp'] = 0
-          obs, reward, done, info = env.step_single(atmp)
-          total_reward += reward
+          obs, reward, done, info = env.step_move(a)
+          episode.append((obs, a, reward, info))
+#          total_reward += reward
+#          
+#      reward, info = self.task.reward() if action is not None else (0, {})
+#      done = self.task.done()
+#
+#      if self.ee.check_grasp() == True:
+#        print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+#        done = True
+##      reward = 1
+##      self.reset()
+#  # Add ground truth robot state into info.
+#      info.update(self.info)
+#
+#      obs = self._get_obs()
+      #obs = None
       print(f'Total Reward: {total_reward} Done: {done}')
       if done:
         break
