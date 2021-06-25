@@ -184,6 +184,10 @@ class Task():
 
     # Unpack next goal step.
     objs, matches, targs, _, _, metric, params, max_reward = self.goals[0]
+#    print('number of goals: ', len(self.goals), self.goals)
+    print('obs: ', objs)
+    print('matches: ', matches)
+    print('targs: ', targs)
 
     # Evaluate by matching object poses.
     if metric == 'pose':
