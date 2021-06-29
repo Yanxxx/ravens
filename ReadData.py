@@ -9,6 +9,8 @@ Created on Wed Jun  9 10:13:22 2021
 import pickle
 import cv2
 import matplotlib.pyplot as plt
+from matplotlib import animation
+from time import sleep
 
 path = 'block-insertion-test/'
 folder = path + 'color/'
@@ -17,6 +19,18 @@ pcl_file = '000000-1'
 
 with open(folder + pcl_file + '.pkl', 'rb') as f:
     data = pickle.load(f)
+    
+plt.figure()
+im = plt.imshow(data[0,0,:,:,:])
+
+for i in range(data.shape[0]):
+#    plt.imshow(data[i,0,:,:,:])
+#    plt.show()
+#    sleep(0.05)
+    im.set_data(data[i,0,:,:,:])
+#    sleep(0.005)
+
+
 #
 #for i in range(2):
 #    for j in range(3):

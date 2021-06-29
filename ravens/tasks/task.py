@@ -185,9 +185,9 @@ class Task():
     # Unpack next goal step.
     objs, matches, targs, _, _, metric, params, max_reward = self.goals[0]
 #    print('number of goals: ', len(self.goals), self.goals)
-    print('obs: ', objs)
-    print('matches: ', matches)
-    print('targs: ', targs)
+#    print('obs: ', objs)
+#    print('matches: ', matches)
+#    print('targs: ', targs)
 
     # Evaluate by matching object poses.
     if metric == 'pose':
@@ -232,7 +232,7 @@ class Task():
     # Move to next goal step if current goal step is complete.
     if np.abs(max_reward - step_reward) < 0.01:
       self.progress += max_reward  # Update task progress.
-      self.goals.pop(0)
+#      self.goals.pop(0)
 
     return reward, info
 

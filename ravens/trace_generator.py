@@ -44,7 +44,7 @@ class TraceGenerator():
         self.trace_key.append({'pose': self.preplace_to_place, 'grasp': [0, 0]})
         self.trace_key.append({'pose': self.place, 'grasp': [1, 0]})
         self.trace_key.append({'pose': self.postplace_to_place, 'grasp': [0, 0]})
-        self.step_resolution = 0.04
+        self.step_resolution = 0.02
         
     def __call__(self, action = None):
         result = []
@@ -77,6 +77,7 @@ class TraceGenerator():
               position = (np.array(p2) - np.array(p1))/step
               for j in range(step - 1):
         #          result.append((p1 + position * (j + 1), q1 + pose * (j + 1)))
+                  q = self.trace_key[i + 1]['pose'][1]
                   result.append({'pose': (p1 + position * (j + 1), q), 'grasp': [0, 0]})
                   
         return result

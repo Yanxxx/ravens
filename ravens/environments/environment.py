@@ -61,7 +61,8 @@ class Environment(gym.Env):
     self.pix_size = 0.003125
     self.obj_ids = {'fixed': [], 'rigid': [], 'deformable': []}
     self.homej = np.array([-1, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
-    self.agent_cams = cameras.RealSenseD415.CONFIG
+#    self.agent_cams = cameras.RealSenseD415.CONFIG
+    self.agent_cams = cameras.RealSenseD435.CONFIG
 
     self.assets_root = assets_root
     self.episode_steps = 0
@@ -221,15 +222,15 @@ class Environment(gym.Env):
 #      grasp = action['grasp']
 #      self.movep(ee_pose)
       #while not self.is_static:
-    while not self.is_static:
-      p.stepSimulation()
+#    while not self.is_static:
+    p.stepSimulation()
 # Get task rewards.
     reward, info = self.task.reward() if action is not None else (0, {})
     done = self.task.done()
 
-    if self.ee.check_grasp() == True:
-      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
-      done = True
+#    if self.ee.check_grasp() == True:
+#      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+#      done = True
 #      reward = 1
 #      self.reset()
   # Add ground truth robot state into info.
@@ -427,7 +428,7 @@ class Environment(gym.Env):
     p.stepSimulation()
       
       
-  def movej(self, targj, speed=0.01, timeout=5):
+  def movej(self, targj, speed=0.02, timeout=5):
     """Move UR5 to target joint configuration."""
     t0 = time.time()
     while (time.time() - t0) < timeout:
@@ -452,7 +453,7 @@ class Environment(gym.Env):
     print(f'Warning: movej exceeded {timeout} second timeout. Skipping.')
     return True
 
-  def movep(self, pose, speed=0.01):
+  def movep(self, pose, speed=0.02):
     """Move UR5 to target end effector pose."""
     targj = self.solve_ik(pose)
     return self.movej(targj, speed)

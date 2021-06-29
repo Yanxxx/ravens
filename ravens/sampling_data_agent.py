@@ -111,6 +111,7 @@ def main(unused_argv):
       if done:
         break
     episode.append((obs, None, reward, info))
+    total_reward = 1
 
     # Only save completed demonstrations.
     # TODO(andyzeng): add back deformable logic.

@@ -59,8 +59,10 @@ class Trace():
           if timeout:
             return True, [0, 0, 0]
         if grasp[1] == 1:
+            print('active suction tool')
             ee.activate()
         else:
+            print('release gripper')
             ee.release()
     
     return timeout, targ_pose
