@@ -28,7 +28,7 @@ class TraceGenerator():
     """"""
     
     def __init__(self):
-        self.init_pose = ([0.4, -0.15, 0.36], [0, 0, 0, 1])
+        self.init_pose = ([0.4, 0.15, 0.36], [0, 0, 0, 1])
 #        self.init_pose = ([0.46562498807907104, -0.375, 0.3599780201911926], [0, 0, 0, 1])
         self.prepick_to_pick = ([0, 0, 0.32], (0, 0, 0, 1))
         self.postpick_to_pick = ([0, 0, 0.32], (0, 0, 0, 1))

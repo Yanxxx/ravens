@@ -87,9 +87,9 @@ class Oracle():
 
   # Near-orthographic projection.
   image_size = (480, 640)
-  intrinsics = (450., 0, 320., 0, 450., 240., 0, 0, 1)
-  position = (0.5, 0, 1.)
-  rotation = p.getQuaternionFromEuler((np.pi / 4, np.pi, -np.pi / 2))
+  intrinsics = (63e4, 0, 320., 0, 63e4, 240., 0, 0, 1)
+  position = (0.5, 0, 1000.)
+  rotation = p.getQuaternionFromEuler((0, np.pi, -np.pi / 2))
 
   # Camera config.
   CONFIG = [{

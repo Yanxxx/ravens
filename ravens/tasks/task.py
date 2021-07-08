@@ -63,6 +63,14 @@ class Task():
     self.progress = 0  # Task progression metric in range [0, 1].
     self._rewards = 0  # Cumulative returned rewards.
 
+  def load_env(self, env, block_pose, fixture_pose):
+    if not self.assets_root:
+      raise ValueError('assets_root must be set for task, '
+                       'call set_assets_root().')
+    self.goals = []
+    self.progress = 0  # Task progression metric in range [0, 1].
+    self._rewards = 0  # Cumulative returned rewards.
+      
   #-------------------------------------------------------------------------
   # Oracle Agent
   #-------------------------------------------------------------------------
