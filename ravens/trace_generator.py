@@ -30,10 +30,10 @@ class TraceGenerator():
     def __init__(self):
         self.init_pose = ([0.4, 0.15, 0.36], [0, 0, 0, 1])
 #        self.init_pose = ([0.46562498807907104, -0.375, 0.3599780201911926], [0, 0, 0, 1])
-        self.prepick_to_pick = ([0, 0, 0.32], (0, 0, 0, 1))
-        self.postpick_to_pick = ([0, 0, 0.32], (0, 0, 0, 1))
-        self.preplace_to_place = ([0, 0, 0.32], (0, 0, 0, 1))
-        self.postplace_to_place = ([0, 0, 0.32], (0, 0, 0, 1))
+        self.prepick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
+        self.postpick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
+        self.preplace_to_place = ([0, 0, 0.05], (0, 0, 0, 1))
+        self.postplace_to_place = ([0, 0, 0.35], (0, 0, 0, 1))
         self.pick = ([0, 0, 0.32], (0, 0, 0, 1))
         self.place = ([0, 0, 0.32], (0, 0, 0, 1))
         self.trace_key = []
@@ -73,7 +73,7 @@ class TraceGenerator():
         #      q2 = act_tmp[i+1][1]
               d = np.linalg.norm(np.array(p2) - np.array(p1))
               step = int(np.round(d / self.step_resolution))
-              print('step=:', step)
+#              print('step=:', step)
               position = (np.array(p2) - np.array(p1))/step
               for j in range(step - 1):
         #          result.append((p1 + position * (j + 1), q1 + pose * (j + 1)))

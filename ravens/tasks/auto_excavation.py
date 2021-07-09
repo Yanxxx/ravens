@@ -1,5 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jul  9 00:12:10 2021
+
+@author: yan
+"""
+
 # coding=utf-8
-# Copyright 2021 The Ravens Authors.
+# Copyright 2021, Yan Li, UTK, Knoxville, TN, 37996.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,17 +25,17 @@
 
 import numpy as np
 from ravens.tasks import primitives
-from ravens.tasks.grippers import Spatula
+from ravens.tasks.grippers import Bucket
 from ravens.tasks.task import Task
 from ravens.utils import utils
 
 
-class SweepingPiles(Task):
+class AutoExcavation(Task):
   """Sweeping task."""
 
   def __init__(self):
     super().__init__()
-    self.ee = Spatula
+    self.ee = Bucket
     self.max_steps = 20
     self.primitive = primitives.push
 
@@ -36,21 +44,22 @@ class SweepingPiles(Task):
 
     # Add goal zone.
     zone_size = (0.12, 0.12, 0)
-    zone_pose = self.get_random_pose(env, zone_size)
-    env.add_object('zone/zone.urdf', zone_pose, 'fixed')
+#    tray_size = (0.5,0,-0.65)
+    tray_pose = ([0.5 , 0 , 0], [0,0,0,1])#self.get_random_pose(env, zone_size)
+    env.add_object("tray/traybox.urdf", tray_pose, 'fixed')
 
     # Add pile of small blocks.
     obj_pts = {}
     obj_ids = []
-    blocks = {}
-    for _ in range(50):
-      rx = self.bounds[0, 0] + 0.15 + np.random.rand() * 0.2
-      ry = self.bounds[1, 0] + 0.4 + np.random.rand() * 0.2
-      xyz = (rx, ry, 0.01)
+    obj_num = 1200
+    for _ in range(obj_num):
+      rx = self.bounds[0, 0] + 0.05 + np.random.rand() * 0.4
+      ry = self.bounds[1, 0] + 0.30 + np.random.rand() * 0.4
+      xyz = (rx, ry, 0.02)
       theta = np.random.rand() * 2 * np.pi
       xyzw = utils.eulerXYZ_to_quatXYZW((0, 0, theta))
-      obj_id = env.add_object('block/small.urdf', (xyz, xyzw))
-      blocks[obj_id] = (xyz, xyzw)
+#      obj_id = env.add_object('sphere/sphere.urdf', (xyz, xyzw)) #block/small.urdf
+      obj_id = env.add_object('block/small.urdf', (xyz, xyzw)) #block/small.urdf
       obj_pts[obj_id] = self.get_object_points(obj_id)
       obj_ids.append((obj_id, (0, None)))
 
@@ -58,21 +67,5 @@ class SweepingPiles(Task):
     # goal = Goal(list(obj_pts.keys()), [0] * len(obj_pts), [zone_pose])
     # metric = Metric('zone', (obj_pts, [(zone_pose, zone_size)]), 1.)
     # self.goals.append((goal, metric))
-    self.goals.append((obj_ids, np.ones((50, 1)), [zone_pose], True, False,
-                       'zone', (obj_pts, [(zone_pose, zone_size)]), 1))
-    
-    return blocks, zone_pose
-
-  def load_env(self, env, blocks, zone_pose):
-    super.load_env(env, blocks, zone_pose)
-    env.add_object('zone/zone.urdf', zone_pose, 'fixed')
-
-    obj_pts = {}
-    obj_ids = []
-    for blockid, pose in blocks:
-      obj_id = env.add_object('block/small.urdf', pose)
-      obj_pts[obj_id] = self.get_object_points(obj_id)
-      obj_ids.append((obj_id, (0, None)))
-
-    self.goals.append((obj_ids, np.ones((len(blocks), 1)), [zone_pose], True, False,
-                       'zone', (obj_pts, [(zone_pose, zone_size)]), 1))
+    self.goals.append((obj_ids, np.ones((obj_num, 1)), [tray_pose], True, False,
+                       'zone', (obj_pts, [(tray_pose, zone_size)]), 1))

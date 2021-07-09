@@ -31,14 +31,16 @@ class BlockInsertion(Task):
 
   def reset(self, env):
     super().reset(env)
+    blocks = {}
     block_id, pose = self.add_block(env)
+    blocks[block_id] = pose
     targ_pose = self.add_fixture(env)
     # self.goals.append(
     #     ([block_id], [2 * np.pi], [[0]], [targ_pose], 'pose', None, 1.))
     self.goals.append(([(block_id, (2 * np.pi, None))], np.int32([[1]]),
                        [targ_pose], False, True, 'pose', None, 1))
     
-    return pose, targ_pose
+    return blocks, targ_pose
 
   def add_block(self, env):
     """Add L-shaped block."""
@@ -55,9 +57,9 @@ class BlockInsertion(Task):
     env.add_object(urdf, pose, 'fixed')
     return pose
 
-  def load_env(self, env, block_pose, fixture_pose):
-    super().load_env(env, block_pose, fixture_pose)
-    block_id = self.load_block(env, block_pose)
+  def load_env(self, env, blocks, fixture_pose):
+    super().load_env(env, list(blocks.values())[0], fixture_pose)
+    block_id = self.load_block(env, list(blocks.values())[0])
     targ_pose = self.load_fixture(env, fixture_pose)
     self.goals.append(([(block_id, (2 * np.pi, None))], np.int32([[1]]),
                        [targ_pose], False, True, 'pose', None, 1))

@@ -204,7 +204,54 @@ class Environment(gym.Env):
     self.ee.release()
 
     # Reset task.
-    self.task.reset(self)
+    blocks, pose = self.task.reset(self)
+
+    # Re-enable rendering.
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+
+    obs, _, _, _ = self.step()
+    return obs, blocks, pose
+
+  def load_env(self, block_pose, fixture_pose):
+    """Performs common reset functionality for all supported tasks."""
+    if not self.task:
+      raise ValueError('environment task must be set. Call set_task or pass '
+                       'the task arg in the environment constructor.')
+    self.obj_ids = {'fixed': [], 'rigid': [], 'deformable': []}
+    p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)
+    p.setGravity(0, 0, -9.8)
+
+    # Temporarily disable rendering to load scene faster.
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+
+    pybullet_utils.load_urdf(p, os.path.join(self.assets_root, PLANE_URDF_PATH),
+                             [0, 0, -0.001])
+    pybullet_utils.load_urdf(
+        p, os.path.join(self.assets_root, UR5_WORKSPACE_URDF_PATH), [0.5, 0, 0])
+
+    # Load UR5 robot arm equipped with suction end effector.
+    # TODO(andyzeng): add back parallel-jaw grippers.
+    self.ur5 = pybullet_utils.load_urdf(
+        p, os.path.join(self.assets_root, UR5_URDF_PATH))
+    self.ee = self.task.ee(self.assets_root, self.ur5, 9, self.obj_ids)
+    self.ee_tip = 10  # Link ID of suction cup.
+
+    # Get revolute joint indices of robot (skip fixed joints).
+    n_joints = p.getNumJoints(self.ur5)
+    joints = [p.getJointInfo(self.ur5, i) for i in range(n_joints)]
+    self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
+
+    # Move robot to home joint configuration.
+    for i in range(len(self.joints)):
+      p.resetJointState(self.ur5, self.joints[i], self.homej[i])
+
+    # Reset end effector.
+    self.ee.release()
+
+    # Reset task.
+#    self.task.reset(self)
+    # Reload task
+    self.task.load_env(self, block_pose, fixture_pose)
 
     # Re-enable rendering.
     p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
@@ -212,21 +259,24 @@ class Environment(gym.Env):
     obs, _, _, _ = self.step()
     return obs
 
-  def step_move(self, action = None):
-    if action:
-      trace = Trace()
-      self.episode_steps += 1
-      timeout, pose = trace(self.movej, self.movep, self.ee, action)
+  def step_move(self, action=None):
+    if not action:
+      return None, None, None, None
+    trace = Trace()
+    self.episode_steps += 1
+    timeout, pose = trace(self.movej, self.movep, self.ee, action)
 #      ee_pose = action['pose']
 ##      print('**********', ee_pose)
 #      grasp = action['grasp']
 #      self.movep(ee_pose)
       #while not self.is_static:
 #    while not self.is_static:
+    grasp = action['grasp']
     p.stepSimulation()
 # Get task rewards.
-    reward, info = self.task.reward() if action is not None else (0, {})
+    reward, info = self.task.reward_single(grasp, self.ee) if action is not None else (0, {})
     done = self.task.done()
+#    print(reward)
 
 #    if self.ee.check_grasp() == True:
 #      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
@@ -395,6 +445,8 @@ class Environment(gym.Env):
     info = {}  # object id : (position, rotation, dimensions)
     for obj_ids in self.obj_ids.values():
       for obj_id in obj_ids:
+        if not obj_id:
+          continue
         pos, rot = p.getBasePositionAndOrientation(obj_id)
         dim = p.getVisualShapeData(obj_id)[0][3]
         info[obj_id] = (pos, rot, dim)

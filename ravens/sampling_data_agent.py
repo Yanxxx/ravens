@@ -92,6 +92,7 @@ def main(unused_argv):
 #          obs, reward, done, info = env.step_simple(act)
           obs, reward, done, info = env.step_move(a)
           episode.append((obs, a, reward, info))
+          print(reward)
 #          total_reward += reward
 #          
 #      reward, info = self.task.reward() if action is not None else (0, {})
@@ -111,7 +112,7 @@ def main(unused_argv):
       if done:
         break
     episode.append((obs, None, reward, info))
-    total_reward = 1
+    total_reward = 0
 
     # Only save completed demonstrations.
     # TODO(andyzeng): add back deformable logic.
