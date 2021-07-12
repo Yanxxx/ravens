@@ -64,6 +64,7 @@ class SweepingPiles(Task):
     return blocks, zone_pose
 
   def load_env(self, env, blocks, zone_pose):
+    zone_size = (0.12, 0.12, 0)
     super.load_env(env, blocks, zone_pose)
     env.add_object('zone/zone.urdf', zone_pose, 'fixed')
 

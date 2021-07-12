@@ -27,6 +27,7 @@ from ravens.dataset import Dataset
 from ravens.environments.environment import Environment
 from ravens.utils import utils
 from trace_generator import TraceGenerator
+from ravens.agents.naive_mdp import NaiveMDP
 
 flags.DEFINE_string('assets_root', '.', '')
 flags.DEFINE_string('data_dir', '.', '')
@@ -61,6 +62,8 @@ def main(unused_argv):
 
   # Initialize scripted oracle agent and dataset.
   agent = task.oracle(env)
+#  agent = NaiveMDP()
+  key_agent = NaiveMDP()
   dataset = Dataset(os.path.join(FLAGS.data_dir, f'{FLAGS.task}-{task.mode}'))
 
   # Train seeds are even and test seeds are odd.
@@ -69,6 +72,7 @@ def main(unused_argv):
     seed = -1 if (task.mode == 'test') else -2
 
   trace_generator = TraceGenerator()
+  
 
   # Collect training data from oracle demonstrations.
   while dataset.n_episodes < FLAGS.n:
@@ -77,7 +81,7 @@ def main(unused_argv):
     seed += 2
     np.random.seed(seed)
     env.set_task(task)
-    obs = env.reset()
+    obs, blocks, pose = env.reset()
     info = None
     reward = 0
     for _ in range(task.max_steps):
@@ -85,16 +89,51 @@ def main(unused_argv):
       if not act:
           continue
       actions = trace_generator(act)
+      key_agent.loadExperience(actions)
 #      print(actions)
       episode.append((obs, act, reward, info))
-      for a in actions:
-#          atmp = {}
-#          obs, reward, done, info = env.step_simple(act)
-          obs, reward, done, info = env.step_move(a)
-          episode.append((obs, a, reward, info))
+      while not key_agent.done():
+          env.load_env(blocks, pose)
+          preced, cur, subtraces = key_agent.step()
+          rewards = []
+#          cur_flag = True
+          print('subtrace numbers: ', len(subtraces))
+          for trace in subtraces:
+              env.load_env(blocks, pose)                  
+              for a in preced:
+                  obs, reward, done, info = env.step_move(a)
+                  print(reward)
+#                  episode.append((obs, a, reward, info))              
+              obs, reward, done, info = env.step_move(cur)
+#              print(reward)
+#              episode.append((obs, a, reward, info))
+#              if cur_flag:
+#                  cur_flag = False
+              rewards.append(reward)
+              reward = 0
+              for act in trace:
+                  obs, r, done, info = env.step_move(act)
+#                  print(r)
+#                  reward = r + 0.9 * reward
+                  rewards.append(r)
+#                  episode.append((obs, a, reward, info))
+#              rewards.append(reward)
+#          print(rewards)
+          key_agent.update(rewards)
+      
+      key_agent.updatePolicy()
+      value, policy = key_agent.getMetric()
+      acts = key_agent.keyframe()
+      print(acts)
+#          
+#      for a in actions:
+##          atmp = {}
+##          obs, reward, done, info = env.step_simple(act)
+#          obs, reward, done, info = env.step_move(a)
+#          episode.append((obs, a, reward, info))
 #          if a == actions[-1]:
 #              reward = 1
-          print(reward)
+#          print(reward)
 #          total_reward += reward
 #          
 #      reward, info = self.task.reward() if action is not None else (0, {})
@@ -110,9 +149,9 @@ def main(unused_argv):
 #
 #      obs = self._get_obs()
       #obs = None
-      print(f'Total Reward: {total_reward} Done: {done}')
-      if done:
-        break
+#      print(f'Total Reward: {total_reward} Done: {done}')
+#      if done:
+#        break
     episode.append((obs, None, reward, info))
     total_reward = 0
 

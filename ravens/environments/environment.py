@@ -193,12 +193,19 @@ class Environment(gym.Env):
 
     # Get revolute joint indices of robot (skip fixed joints).
     n_joints = p.getNumJoints(self.ur5)
+#    print('************joints ', n_joints)
     joints = [p.getJointInfo(self.ur5, i) for i in range(n_joints)]
     self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
 
     # Move robot to home joint configuration.
     for i in range(len(self.joints)):
       p.resetJointState(self.ur5, self.joints[i], self.homej[i])
+    
+#    ur5_pos, ur5_orien = p.getBasePositionAndOrientation(self.ur5)
+#    
+#    print(ur5_pos, ur5_orien)
+    ur5_pose = p.getLinkState(self.ur5, 7)
+#    print('***************', ur5_pose)
 
     # Reset end effector.
     self.ee.release()

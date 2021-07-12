@@ -28,11 +28,15 @@ class TraceGenerator():
     """"""
     
     def __init__(self):
-        self.init_pose = ([0.4, 0.15, 0.36], [0, 0, 0, 1])
+        self.init_pose = ([0.487, 0.109, 0.347], [0, 0, 0, 1])
 #        self.init_pose = ([0.46562498807907104, -0.375, 0.3599780201911926], [0, 0, 0, 1])
-        self.prepick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
-        self.postpick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
-        self.preplace_to_place = ([0, 0, 0.05], (0, 0, 0, 1))
+#        self.prepick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
+#        self.postpick_to_pick = ([0, 0, 0.05], (0, 0, 0, 1))
+#        self.preplace_to_place = ([0, 0, 0.05], (0, 0, 0, 1))
+#        self.postplace_to_place = ([0, 0, 0.35], (0, 0, 0, 1))
+        self.prepick_to_pick = ([0, 0, 0.35], (0, 0, 0, 1))
+        self.postpick_to_pick = ([0, 0, 0.35], (0, 0, 0, 1))
+        self.preplace_to_place = ([0, 0, 0.35], (0, 0, 0, 1))
         self.postplace_to_place = ([0, 0, 0.35], (0, 0, 0, 1))
         self.pick = ([0, 0, 0.32], (0, 0, 0, 1))
         self.place = ([0, 0, 0.32], (0, 0, 0, 1))
@@ -44,7 +48,7 @@ class TraceGenerator():
         self.trace_key.append({'pose': self.preplace_to_place, 'grasp': [0, 0]})
         self.trace_key.append({'pose': self.place, 'grasp': [1, 0]})
         self.trace_key.append({'pose': self.postplace_to_place, 'grasp': [0, 0]})
-        self.step_resolution = 0.02
+        self.step_resolution = 0.1
         
     def __call__(self, action = None):
         result = []
