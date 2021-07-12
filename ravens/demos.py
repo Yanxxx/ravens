@@ -58,8 +58,6 @@ def main(unused_argv):
   if seed < 0:
     seed = -1 if (task.mode == 'test') else -2
 
-  print(env)
-
   # Collect training data from oracle demonstrations.
   while dataset.n_episodes < FLAGS.n:
     print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')

@@ -65,7 +65,10 @@ class NaiveMDP:
 #            tmp = copy.deepcopy(precedence)
             sub_trace = []
             sub_trace.append(self.trace[state + i])
-            ids = self.tail(state + i)
+            
+            ids = self.tailNaive(state + i)
+            
+#            ids = self.tail(state + i)
             if not ids:
                 sub_traces.append(sub_trace)
                 continue
@@ -87,6 +90,9 @@ class NaiveMDP:
         self.action.append(a)
         return a
     
+    def tailNaive(self, state):
+        return list(range(state, self.length))
+    
     def done(self):
         return self.current_state < 0
     
@@ -105,27 +111,32 @@ class NaiveMDP:
             return
         if self.length == 0:
             return
-        dominator = sum(np.exp(self.value))
-        immediate_reward = rewards[0]
-        v = np.zeros(self.length)
+        comb = len(rewards)
+        check = self.length - self.current_state - 2
+        if comb != check:
+            print('debug error, the rewards number is not match the state', comb, check)
+            return
+        immediate_reward = rewards[0][0]
+        v = []
+        v.append(immediate_reward)
+        for r in rewards:
+            vp = 0
+            for j in range(1, len(r)):
+                vp = r[j] + vp * self.decay
+                v.append(vp)
+        v = np.concatenate((np.zeros(self.length - check), v))
         v[self.current_state] = immediate_reward
-#        self.value[self.current_state] = immediate_reward
-        
-#            self.value[self.current_state] += self.decay * rewards[i]
-        e = sum(rewards) - rewards[0]
-        self.value[self.current_state] += self.decay * e
-        policy = np.zeros(self.length)
-        for i in range(self.current_state, self.length):
-            policy[i] = np.exp(self.value[i]) / dominator
-        print(policy)
-        self.policy.append(policy)
+        dominator = sum(np.exp(v))
+        p = np.exp(v) / dominator
+        self.policy.append(p)
+
         
     def updatePolicy(self):
         if self.length == 0:
             return
         self.policy = self.policy[-1::-1]
         p = np.array(self.policy)
-#        print(p)
+        print(p)
         plt.figure
         plt.imshow(p)
         plt.show()
