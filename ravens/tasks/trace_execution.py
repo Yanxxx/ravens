@@ -44,6 +44,7 @@ class Trace():
     Returns:
       timeout: robot movement timed out if True.
     """
+#    print('trace excution ###################3 ', action)
     pose = action['pose']
     grasp = action['grasp']
     

@@ -98,26 +98,35 @@ def main(unused_argv):
           rewards = []
 #          cur_flag = True
           print('subtrace numbers: ', len(subtraces))
-          for trace in subtraces:
-              env.load_env(blocks, pose)                  
+          for count, trace in enumerate(subtraces):
+              print('subtrace -- ', count)
+              env.load_env(blocks, pose)
+              reward = []
+              rp = 0
               for a in preced:
-                  obs, reward, done, info = env.step_move(a)
-                  print(reward)
+#                  print(a)
+                  obs, r, done, info = env.step_move(a)
+                  rp = key_agent.decay * rp + r
+                  print(r)
 #                  episode.append((obs, a, reward, info))              
-              obs, reward, done, info = env.step_move(cur)
+              obs, r, done, info = env.step_move(cur)
+#              print('urr state;   ', cur)
+              print(r + rp)
 #              print(reward)
 #              episode.append((obs, a, reward, info))
 #              if cur_flag:
 #                  cur_flag = False
-              rewards.append(reward)
-              reward = 0
+              reward.append(r + rp)
+#              reward = 0
+#              print(trace)
               for act in trace:
+                  print(act)
                   obs, r, done, info = env.step_move(act)
-#                  print(r)
+                  print(r)
 #                  reward = r + 0.9 * reward
-                  rewards.append(r)
+                  reward.append(r)
 #                  episode.append((obs, a, reward, info))
-#              rewards.append(reward)
+              rewards.append(reward)
 #          print(rewards)
           key_agent.update(rewards)
       
