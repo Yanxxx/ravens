@@ -65,6 +65,7 @@ class ManipulatingRope(Task):
     parent_id = -1
     targets = []
     objects = []
+    blocks = {}
     for i in range(n_parts):
       position[2] += np.linalg.norm(increment)
       part_id = p.createMultiBody(0.1, part_shape, part_visual,
@@ -86,6 +87,7 @@ class ManipulatingRope(Task):
       env.obj_ids['rigid'].append(part_id)
       parent_id = part_id
       target_xyz = np.float32(corner0) + i * increment + increment / 2
+      blocks[part_id] = (target_xyz, (0, 0, 0, 1))
       objects.append((part_id, (0, None)))
       targets.append((target_xyz, (0, 0, 0, 1)))
 
@@ -96,3 +98,5 @@ class ManipulatingRope(Task):
 
     for i in range(480):
       p.stepSimulation()
+    
+    return blocks, square_pose

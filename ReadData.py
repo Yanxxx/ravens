@@ -13,21 +13,23 @@ from matplotlib import animation
 from time import sleep
 
 path = 'block-insertion-test/'
-folder = path + 'color/'
+folder = path + 'ee/'
+#folder = path + 'object_pos/'
+#folder = path + 'targ_pos/'
 pcl_file = '000000-1'
 
 
 with open(folder + pcl_file + '.pkl', 'rb') as f:
     data = pickle.load(f)
     
-plt.figure()
-im = plt.imshow(data[0,0,:,:,:])
+#plt.figure()
+#im = plt.imshow(data[0,0, :,:])
 
-for i in range(data.shape[0]):
-#    plt.imshow(data[i,0,:,:,:])
-#    plt.show()
-#    sleep(0.05)
-    im.set_data(data[i,0,:,:,:])
+#for i in range(data.shape[0]):
+##    plt.imshow(data[i,0,:,:,:])
+##    plt.show()
+##    sleep(0.05)
+#    im.set_data(data[i,0,:,:,:])
 #    sleep(0.005)
 
 

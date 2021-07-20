@@ -65,7 +65,7 @@ def main(unused_argv):
     seed += 2
     np.random.seed(seed)
     env.set_task(task)
-    obs = env.reset()
+    obs, _, _ = env.reset()
     info = None
     reward = 0
     for _ in range(task.max_steps):

@@ -147,7 +147,7 @@ class Environment(gym.Env):
          for i in self.obj_ids['rigid']]
     return all(np.array(v) < 5e-3)
 
-  def add_object(self, urdf, pose, category='rigid'):
+  def add_object(self, urdf, pose, category='rigid', scale=1.0):
     """List of (fixed, rigid, or deformable) objects in env."""
     fixed_base = 1 if category == 'fixed' else 0
     obj_id = pybullet_utils.load_urdf(
@@ -155,7 +155,8 @@ class Environment(gym.Env):
         os.path.join(self.assets_root, urdf),
         pose[0],
         pose[1],
-        useFixedBase=fixed_base)
+        useFixedBase=fixed_base,
+        globalScaling=scale)
     self.obj_ids[category].append(obj_id)
     return obj_id
 
@@ -212,6 +213,7 @@ class Environment(gym.Env):
 
     # Reset task.
     blocks, pose = self.task.reset(self)
+    print('task reset finished')
 
     # Re-enable rendering.
     p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
@@ -297,6 +299,39 @@ class Environment(gym.Env):
   #obs = None
     return obs, reward, done, info
 
+  def add_line(self, line=None, color=[1,0,0], lw=3):
+      if not line:
+          return
+      head = line[0]
+      for tail in line[1:]:          
+        p.addUserDebugLine(head,
+                           tail,
+                           lineColorRGB=color,
+                           lifeTime=0,
+                           lineWidth=lw)
+        head = tail
+
+
+  def add_line_points(self, line=None, color=[1,0,0], lw=9, lifetime=0, offset=0):
+      if not line:
+          return
+#      f = 2
+      for head in line:  
+        head[0] += 0.001 * offset
+        head[1] += 0.001 * offset
+        delta = np.copy(np.array(head))
+        delta[2] -= 0.005
+        head[2] += 0.005
+#        print(head, delta)
+        p.addUserDebugLine(head,
+                           delta,
+                           lineColorRGB=color,
+                           lifeTime=lifetime,
+                           lineWidth=lw)
+        
+  def get_object_pose(self):
+      return self.task.get_object_pose()
+
   def step_single(self, action = None):
     if action:
       self.episode_steps += 1
@@ -311,11 +346,11 @@ class Environment(gym.Env):
       else:
           self.ee.release()
       marker_head_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]]
-      marker_tail_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]+0.1]
+      marker_tail_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]+0.01]
       p.addUserDebugLine(marker_head_point,
                          marker_tail_point,
                          lineColorRGB=[1, 0, 0],
-                         lifeTime=10,
+                         lifeTime=1,
                          lineWidth=3)
     else:
       self.movj_speed_control(self.joint_space_cmd, speed=0.1)
@@ -362,10 +397,13 @@ class Environment(gym.Env):
           obs['color'] += (color,)
           obs['depth'] += (depth,)
         return obs, 0.0, True, self.info
-
+    count = 0
     # Step simulator asynchronously until objects settle.
     while not self.is_static:
       p.stepSimulation()
+      count += 1
+      if count > 20:
+          break
 
     # Get task rewards.
     reward, info = self.task.reward() if action is not None else (0, {})

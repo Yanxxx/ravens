@@ -7,7 +7,11 @@
   <material name="LightGrey">
     <color rgba="0.8 0.8 0.8 1.0"/>
   </material>
-
+  
+  <material name="Cyan">
+    <color rgba="0.8 0.0 0.8 1.0"/>
+  </material>
+  
   <material name="DarkGrey">
     <color rgba="0.2 0.2 0.2 1.0"/>
   </material>
@@ -148,6 +152,7 @@
         <mesh filename="visual/wrist2.stl"/>
       </geometry>
       <material name="DarkGrey"/>
+      <!-- material name="Cyan"/-->
     </visual>
     <!-- <collision>
       <geometry>
@@ -174,6 +179,7 @@
         <mesh filename="visual/wrist3.stl"/>
       </geometry>
       <material name="LightGrey"/>
+      <!-- material name="Cyan"/ -->
     </visual>
     <collision>
       <geometry>

@@ -16,8 +16,11 @@
       <geometry>
         <mesh filename="head.obj" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="darkgrey">
+      <!--material name="darkgrey">
         <color rgba="0.2 0.2 0.2 1"/>
+      </material-->
+      <material name="Orange">
+        <color rgba="1 0.3 0.0 1"/>
       </material>
     </visual>
     <collision>

@@ -42,6 +42,7 @@ class SweepingPiles(Task):
     # Add pile of small blocks.
     obj_pts = {}
     obj_ids = []
+    blocks = {}
     for _ in range(50):
       rx = self.bounds[0, 0] + 0.15 + np.random.rand() * 0.2
       ry = self.bounds[1, 0] + 0.4 + np.random.rand() * 0.2
@@ -49,6 +50,7 @@ class SweepingPiles(Task):
       theta = np.random.rand() * 2 * np.pi
       xyzw = utils.eulerXYZ_to_quatXYZW((0, 0, theta))
       obj_id = env.add_object('block/small.urdf', (xyz, xyzw))
+      blocks[obj_id] = (xyz, xyzw)
       obj_pts[obj_id] = self.get_object_points(obj_id)
       obj_ids.append((obj_id, (0, None)))
 
@@ -57,4 +59,21 @@ class SweepingPiles(Task):
     # metric = Metric('zone', (obj_pts, [(zone_pose, zone_size)]), 1.)
     # self.goals.append((goal, metric))
     self.goals.append((obj_ids, np.ones((50, 1)), [zone_pose], True, False,
+                       'zone', (obj_pts, [(zone_pose, zone_size)]), 1))
+    
+    return blocks, zone_pose
+
+  def load_env(self, env, blocks, zone_pose):
+    zone_size = (0.12, 0.12, 0)
+    super.load_env(env, blocks, zone_pose)
+    env.add_object('zone/zone.urdf', zone_pose, 'fixed')
+
+    obj_pts = {}
+    obj_ids = []
+    for blockid, pose in blocks:
+      obj_id = env.add_object('block/small.urdf', pose)
+      obj_pts[obj_id] = self.get_object_points(obj_id)
+      obj_ids.append((obj_id, (0, None)))
+
+    self.goals.append((obj_ids, np.ones((len(blocks), 1)), [zone_pose], True, False,
                        'zone', (obj_pts, [(zone_pose, zone_size)]), 1))

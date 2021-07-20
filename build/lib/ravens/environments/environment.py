@@ -24,6 +24,7 @@ import numpy as np
 from ravens.tasks import cameras
 from ravens.utils import pybullet_utils
 from ravens.utils import utils
+from ravens.tasks.trace_execution import Trace
 
 import pybullet as p
 
@@ -60,9 +61,12 @@ class Environment(gym.Env):
     self.pix_size = 0.003125
     self.obj_ids = {'fixed': [], 'rigid': [], 'deformable': []}
     self.homej = np.array([-1, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
-    self.agent_cams = cameras.RealSenseD415.CONFIG
+#    self.agent_cams = cameras.RealSenseD415.CONFIG
+    self.agent_cams = cameras.RealSenseD435.CONFIG
 
     self.assets_root = assets_root
+    self.episode_steps = 0
+    self.joint_space_cmd = self.homej
 
     color_tuple = [
         gym.spaces.Box(0, 255, config['image_size'] + (3,), dtype=np.uint8)
@@ -90,6 +94,15 @@ class Environment(gym.Env):
             gym.spaces.Tuple(
                 (self.position_bounds,
                  gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32)))
+    })
+            
+    self.action_space_single_move = gym.spaces.Dict({
+        'pose':
+            gym.spaces.Tuple(
+                (self.position_bounds,
+                 gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32))),
+        'grasp':
+            gym.spaces.Discrete(2)
     })
 
     # Start PyBullet.
@@ -134,7 +147,7 @@ class Environment(gym.Env):
          for i in self.obj_ids['rigid']]
     return all(np.array(v) < 5e-3)
 
-  def add_object(self, urdf, pose, category='rigid'):
+  def add_object(self, urdf, pose, category='rigid', scale=1.0):
     """List of (fixed, rigid, or deformable) objects in env."""
     fixed_base = 1 if category == 'fixed' else 0
     obj_id = pybullet_utils.load_urdf(
@@ -142,7 +155,8 @@ class Environment(gym.Env):
         os.path.join(self.assets_root, urdf),
         pose[0],
         pose[1],
-        useFixedBase=fixed_base)
+        useFixedBase=fixed_base,
+        globalScaling=scale)
     self.obj_ids[category].append(obj_id)
     return obj_id
 
@@ -180,6 +194,59 @@ class Environment(gym.Env):
 
     # Get revolute joint indices of robot (skip fixed joints).
     n_joints = p.getNumJoints(self.ur5)
+#    print('************joints ', n_joints)
+    joints = [p.getJointInfo(self.ur5, i) for i in range(n_joints)]
+    self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
+
+    # Move robot to home joint configuration.
+    for i in range(len(self.joints)):
+      p.resetJointState(self.ur5, self.joints[i], self.homej[i])
+    
+#    ur5_pos, ur5_orien = p.getBasePositionAndOrientation(self.ur5)
+#    
+#    print(ur5_pos, ur5_orien)
+    ur5_pose = p.getLinkState(self.ur5, 7)
+#    print('***************', ur5_pose)
+
+    # Reset end effector.
+    self.ee.release()
+
+    # Reset task.
+    blocks, pose = self.task.reset(self)
+    print('task reset finished')
+
+    # Re-enable rendering.
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+
+    obs, _, _, _ = self.step()
+    return obs, blocks, pose
+
+  def load_env(self, block_pose, fixture_pose):
+    """Performs common reset functionality for all supported tasks."""
+    if not self.task:
+      raise ValueError('environment task must be set. Call set_task or pass '
+                       'the task arg in the environment constructor.')
+    self.obj_ids = {'fixed': [], 'rigid': [], 'deformable': []}
+    p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)
+    p.setGravity(0, 0, -9.8)
+
+    # Temporarily disable rendering to load scene faster.
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+
+    pybullet_utils.load_urdf(p, os.path.join(self.assets_root, PLANE_URDF_PATH),
+                             [0, 0, -0.001])
+    pybullet_utils.load_urdf(
+        p, os.path.join(self.assets_root, UR5_WORKSPACE_URDF_PATH), [0.5, 0, 0])
+
+    # Load UR5 robot arm equipped with suction end effector.
+    # TODO(andyzeng): add back parallel-jaw grippers.
+    self.ur5 = pybullet_utils.load_urdf(
+        p, os.path.join(self.assets_root, UR5_URDF_PATH))
+    self.ee = self.task.ee(self.assets_root, self.ur5, 9, self.obj_ids)
+    self.ee_tip = 10  # Link ID of suction cup.
+
+    # Get revolute joint indices of robot (skip fixed joints).
+    n_joints = p.getNumJoints(self.ur5)
     joints = [p.getJointInfo(self.ur5, i) for i in range(n_joints)]
     self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
 
@@ -191,13 +258,123 @@ class Environment(gym.Env):
     self.ee.release()
 
     # Reset task.
-    self.task.reset(self)
+#    self.task.reset(self)
+    # Reload task
+    self.task.load_env(self, block_pose, fixture_pose)
 
     # Re-enable rendering.
     p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
 
     obs, _, _, _ = self.step()
     return obs
+
+  def step_move(self, action=None):
+    if not action:
+      return None, None, None, None
+    trace = Trace()
+    self.episode_steps += 1
+    timeout, pose = trace(self.movej, self.movep, self.ee, action)
+#      ee_pose = action['pose']
+##      print('**********', ee_pose)
+#      grasp = action['grasp']
+#      self.movep(ee_pose)
+      #while not self.is_static:
+#    while not self.is_static:
+    grasp = action['grasp']
+    p.stepSimulation()
+# Get task rewards.
+    reward, info = self.task.reward_single(grasp, self.ee) if action is not None else (0, {})
+    done = self.task.done()
+#    print(reward)
+
+#    if self.ee.check_grasp() == True:
+#      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+#      done = True
+#      reward = 1
+#      self.reset()
+  # Add ground truth robot state into info.
+    info.update(self.info)
+
+    obs = self._get_obs()
+  #obs = None
+    return obs, reward, done, info
+
+  def add_line(self, line=None, color=[1,0,0], lw=3):
+      if not line:
+          return
+      head = line[0]
+      for tail in line[1:]:          
+        p.addUserDebugLine(head,
+                           tail,
+                           lineColorRGB=color,
+                           lifeTime=0,
+                           lineWidth=lw)
+        head = tail
+
+
+  def add_line_points(self, line=None, color=[1,0,0], lw=9, lifetime=0, offset=0):
+      if not line:
+          return
+#      f = 2
+      for head in line:  
+        head[0] += 0.001 * offset
+        head[1] += 0.001 * offset
+        delta = np.copy(np.array(head))
+        delta[2] -= 0.005
+        head[2] += 0.005
+#        print(head, delta)
+        p.addUserDebugLine(head,
+                           delta,
+                           lineColorRGB=color,
+                           lifeTime=lifetime,
+                           lineWidth=lw)
+        
+  def get_object_pose(self):
+      return self.task.get_object_pose()
+
+  def step_single(self, action = None):
+    if action:
+      self.episode_steps += 1
+      ee_pose = action['pose']
+      grasp = action['grasp']
+      self.joint_space_cmd = self.solve_ik(ee_pose)
+      self.movj_speed_control(self.joint_space_cmd)
+      #self.movej_fast(joint_position)
+      #self.movep(ee_pose)
+      if grasp == 1:
+          self.ee.activate()
+      else:
+          self.ee.release()
+      marker_head_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]]
+      marker_tail_point = [ee_pose[0][0], ee_pose[0][1], ee_pose[0][2]+0.01]
+      p.addUserDebugLine(marker_head_point,
+                         marker_tail_point,
+                         lineColorRGB=[1, 0, 0],
+                         lifeTime=1,
+                         lineWidth=3)
+    else:
+      self.movj_speed_control(self.joint_space_cmd, speed=0.1)
+
+
+      #while not self.is_static:
+    p.stepSimulation()
+# Get task rewards.
+    reward, info = self.task.reward() if action is not None else (0, {})
+    done = self.task.done()
+
+    if self.ee.check_grasp() == True:
+      print("grasp succeed! Total steps in current episodes{:d}".format(self.episode_steps))
+      done = True
+      reward = 1
+      self.reset()
+
+  # Add ground truth robot state into info.
+    info.update(self.info)
+
+    obs = self._get_obs()
+  #obs = None
+    return obs, reward, done, info
+  
 
   def step(self, action=None):
     """Execute action with specified primitive.
@@ -220,10 +397,13 @@ class Environment(gym.Env):
           obs['color'] += (color,)
           obs['depth'] += (depth,)
         return obs, 0.0, True, self.info
-
+    count = 0
     # Step simulator asynchronously until objects settle.
     while not self.is_static:
       p.stepSimulation()
+      count += 1
+      if count > 20:
+          break
 
     # Get task rewards.
     reward, info = self.task.reward() if action is not None else (0, {})
@@ -310,6 +490,8 @@ class Environment(gym.Env):
     info = {}  # object id : (position, rotation, dimensions)
     for obj_ids in self.obj_ids.values():
       for obj_id in obj_ids:
+        if not obj_id:
+          continue
         pos, rot = p.getBasePositionAndOrientation(obj_id)
         dim = p.getVisualShapeData(obj_id)[0][3]
         info[obj_id] = (pos, rot, dim)
@@ -322,8 +504,28 @@ class Environment(gym.Env):
   #---------------------------------------------------------------------------
   # Robot Movement Functions
   #---------------------------------------------------------------------------
-
-  def movej(self, targj, speed=0.01, timeout=5):
+  def movj_speed_control(self, targj, speed = 7.0):
+    currj = [p.getJointState(self.ur5, i)[0] for i in self.joints]
+    currj = np.array(currj)
+    diffj = targj - currj
+    if all(np.abs(diffj) < 0.1):
+      return False
+    
+    norm = np.linalg.norm(diffj)
+    v = diffj / norm if norm > 0 else 0
+    stepj = diffj * speed
+    
+    gains = np.ones(len(self.joints))
+    p.setJointMotorControlArray(
+        bodyIndex=self.ur5,
+        jointIndices=self.joints,
+        controlMode=p.VELOCITY_CONTROL,
+        targetVelocities=stepj,
+        velocityGains=gains)
+    p.stepSimulation()
+      
+      
+  def movej(self, targj, speed=0.02, timeout=5):
     """Move UR5 to target joint configuration."""
     t0 = time.time()
     while (time.time() - t0) < timeout:
@@ -348,7 +550,7 @@ class Environment(gym.Env):
     print(f'Warning: movej exceeded {timeout} second timeout. Skipping.')
     return True
 
-  def movep(self, pose, speed=0.01):
+  def movep(self, pose, speed=0.02):
     """Move UR5 to target end effector pose."""
     targj = self.solve_ik(pose)
     return self.movej(targj, speed)

@@ -85,6 +85,8 @@ class Task():
     def act(obs, info):  # pylint: disable=unused-argument
       """Calculate action."""
 
+      if len(self.goals) < 1:
+          return
       # Oracle uses perfect RGB-D orthographic images and segmentation masks.
       _, hmap, obj_mask = self.get_true_image(env)
 
@@ -275,10 +277,14 @@ class Task():
 #    print('targs: ', targs)
 
     # Evaluate by matching object poses.
+    self.obj_id = 0
+    self.obj_pts = []
+    self.metric = metric
     if metric == 'pose':
       step_reward = 0
       for i in range(len(objs)):
         object_id, (symmetry, _) = objs[i]
+        self.obj_id = object_id
         pose = p.getBasePositionAndOrientation(object_id)
         targets_i = np.argwhere(matches[i, :]).reshape(-1)
         print('targets_i ', targets_i)
@@ -292,6 +298,7 @@ class Task():
     elif metric == 'zone':
       zone_pts, total_pts = 0, 0
       obj_pts, zones = params
+      self.obj_pts = obj_pts
       for zone_pose, zone_size in zones:
 
         # Count valid points in zone.
@@ -321,6 +328,17 @@ class Task():
 #      self.goals.pop(0)
 
     return reward, info
+
+  def get_object_pose(self):
+    if self.metric == 'pose':
+      return p.getBasePositionAndOrientation(self.obj_id)
+    elif self.metric == 'zone':
+      r = []
+      for idx in self.obj_pts:
+          tmp = p.getBasePositionAndOrientation(idx)
+          r.append(tmp)
+      return r
+        
 
   def done(self):
     """Check if the task is done or has failed.

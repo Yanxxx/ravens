@@ -26,7 +26,6 @@ import numpy as np
 from ravens.tasks import cameras
 from ravens.tasks import primitives
 from ravens.tasks.grippers import Suction
-from ravens.tasks.grippers import Bucket
 from ravens.utils import utils
 
 import pybullet as p
@@ -36,8 +35,7 @@ class Task():
   """Base Task class."""
 
   def __init__(self):
-#    self.ee = Suction
-    self.ee = Bucket
+    self.ee = Suction
     self.mode = 'train'
     self.sixdof = False
     self.primitive = primitives.PickPlace()
@@ -64,7 +62,18 @@ class Task():
     self.goals = []
     self.progress = 0  # Task progression metric in range [0, 1].
     self._rewards = 0  # Cumulative returned rewards.
+    blocks = {}
+    pose = None
+    return blocks, pose
 
+  def load_env(self, env, blocks, fixture_pose):
+    if not self.assets_root:
+      raise ValueError('assets_root must be set for task, '
+                       'call set_assets_root().')
+    self.goals = []
+    self.progress = 0  # Task progression metric in range [0, 1].
+    self._rewards = 0  # Cumulative returned rewards.
+      
   #-------------------------------------------------------------------------
   # Oracle Agent
   #-------------------------------------------------------------------------
@@ -76,6 +85,8 @@ class Task():
     def act(obs, info):  # pylint: disable=unused-argument
       """Calculate action."""
 
+      if len(self.goals) < 1:
+          return
       # Oracle uses perfect RGB-D orthographic images and segmentation masks.
       _, hmap, obj_mask = self.get_true_image(env)
 
@@ -172,9 +183,8 @@ class Task():
   #-------------------------------------------------------------------------
   # Reward Function and Task Completion Metrics
   #-------------------------------------------------------------------------
-
-  def reward(self):
-    """Get delta rewards for current timestep.
+  def reward_single(self, grasp, ee):
+    """Get rewards for current timestep.
 
     Returns:
       A tuple consisting of the scalar (delta) reward, plus `extras`
@@ -183,9 +193,16 @@ class Task():
         `extras` for further data analysis.
     """
     reward, info = 0, {}
+    
+#    print('grasp: ', grasp)
 
     # Unpack next goal step.
     objs, matches, targs, _, _, metric, params, max_reward = self.goals[0]
+#    print('in task.reward, objs: ', objs)
+#    print('number of goals: ', len(self.goals), self.goals)
+#    print('obs: ', objs)
+#    print('matches: ', matches)
+#    print('targs: ', targs)
 
     # Evaluate by matching object poses.
     if metric == 'pose':
@@ -194,11 +211,17 @@ class Task():
         object_id, (symmetry, _) = objs[i]
         pose = p.getBasePositionAndOrientation(object_id)
         targets_i = np.argwhere(matches[i, :]).reshape(-1)
+        if sum(grasp) == 2 and ee.check_grasp():
+            step_reward = max_reward / len(objs)
         for j in targets_i:
           target_pose = targs[j]
-          if self.is_match(pose, target_pose, symmetry):
-            step_reward += max_reward / len(objs)
+          if sum(grasp) != 1:
+              continue
+          if self.is_match(pose, target_pose, symmetry) and ee.detect_contact():
+            step_reward = max_reward / len(objs)
             break
+      if step_reward == 0:
+          step_reward = -0.02
 
     # Evaluate by measuring object intersection with zone.
     elif metric == 'zone':
@@ -230,9 +253,92 @@ class Task():
     # Move to next goal step if current goal step is complete.
     if np.abs(max_reward - step_reward) < 0.01:
       self.progress += max_reward  # Update task progress.
-      self.goals.pop(0)
+#      self.goals.pop(0)
+
+    return step_reward, info
+    
+  def reward(self):
+    """Get delta rewards for current timestep.
+
+    Returns:
+      A tuple consisting of the scalar (delta) reward, plus `extras`
+        dict which has extra task-dependent info from the process of
+        computing rewards that gives us finer-grained details. Use
+        `extras` for further data analysis.
+    """
+    reward, info = 0, {}
+
+    # Unpack next goal step.
+    objs, matches, targs, _, _, metric, params, max_reward = self.goals[0]
+#    print('in task.reward, objs: ', objs)
+#    print('number of goals: ', len(self.goals), self.goals)
+#    print('obs: ', objs)
+#    print('matches: ', matches)
+#    print('targs: ', targs)
+
+    # Evaluate by matching object poses.
+    self.obj_id = 0
+    self.obj_pts = []
+    self.metric = metric
+    if metric == 'pose':
+      step_reward = 0
+      for i in range(len(objs)):
+        object_id, (symmetry, _) = objs[i]
+        self.obj_id = object_id
+        pose = p.getBasePositionAndOrientation(object_id)
+        targets_i = np.argwhere(matches[i, :]).reshape(-1)
+        print('targets_i ', targets_i)
+        for j in targets_i:
+          target_pose = targs[j]
+          if self.is_match(pose, target_pose, symmetry):
+            step_reward += max_reward / len(objs)
+            break
+
+    # Evaluate by measuring object intersection with zone.
+    elif metric == 'zone':
+      zone_pts, total_pts = 0, 0
+      obj_pts, zones = params
+      self.obj_pts = obj_pts
+      for zone_pose, zone_size in zones:
+
+        # Count valid points in zone.
+        for obj_id in obj_pts:
+          pts = obj_pts[obj_id]
+          obj_pose = p.getBasePositionAndOrientation(obj_id)
+          world_to_zone = utils.invert(zone_pose)
+          obj_to_zone = utils.multiply(world_to_zone, obj_pose)
+          pts = np.float32(utils.apply(obj_to_zone, pts))
+          if len(zone_size) > 1:
+            valid_pts = np.logical_and.reduce([
+                pts[0, :] > -zone_size[0] / 2, pts[0, :] < zone_size[0] / 2,
+                pts[1, :] > -zone_size[1] / 2, pts[1, :] < zone_size[1] / 2,
+                pts[2, :] < self.bounds[2, 1]])
+
+          zone_pts += np.sum(np.float32(valid_pts))
+          total_pts += pts.shape[1]
+      step_reward = max_reward * (zone_pts / total_pts)
+
+    # Get cumulative rewards and return delta.
+    reward = self.progress + step_reward - self._rewards
+    self._rewards = self.progress + step_reward
+
+    # Move to next goal step if current goal step is complete.
+    if np.abs(max_reward - step_reward) < 0.01:
+      self.progress += max_reward  # Update task progress.
+#      self.goals.pop(0)
 
     return reward, info
+
+  def get_object_pose(self):
+    if self.metric == 'pose':
+      return p.getBasePositionAndOrientation(self.obj_id)
+    elif self.metric == 'zone':
+      r = []
+      for idx in self.obj_pts:
+          tmp = p.getBasePositionAndOrientation(idx)
+          r.append(tmp)
+      return r
+        
 
   def done(self):
     """Check if the task is done or has failed.

@@ -28,11 +28,14 @@ class BlockInsertion(Task):
   def __init__(self):
     super().__init__()
     self.max_steps = 3
+    self.metric = 'pose'
+    self.obj_id = 0
 
   def reset(self, env):
     super().reset(env)
     blocks = {}
     block_id, pose = self.add_block(env)
+    self.obj_id = block_id
     blocks[block_id] = pose
     targ_pose = self.add_fixture(env)
     # self.goals.append(

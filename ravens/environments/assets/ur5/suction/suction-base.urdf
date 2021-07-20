@@ -1,9 +1,12 @@
 <?xml version="0.0" ?>
 <robot name="suction-base.urdf">
-  <material name="DarkGrey">
-    <color rgba="0.2 0.2 0.2 1.0"/>
+  <material name="CYan">
+    <color rgba="0.0 1.0 1.0 1.0"/>
   </material>
 
+      <material name="Orange">
+        <color rgba="1 0.3 0.0 1"/>
+      </material>
   <link name="baseLink">
     <contact>
       <lateral_friction value="1.0"/>
@@ -20,7 +23,7 @@
       <geometry>
         <mesh filename="suction/base.obj" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="DarkGrey"/>
+      <material name="Orange"/>
     </visual>
   </link>
 
@@ -40,7 +43,7 @@
       <geometry>
         <mesh filename="suction/mid.obj" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="DarkGrey"/>
+      <material name="Orange"/>
     </visual>
   </link>
 

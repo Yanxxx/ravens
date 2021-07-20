@@ -31,12 +31,13 @@ from ravens.tasks.stack_block_pyramid import StackBlockPyramid
 from ravens.tasks.sweeping_piles import SweepingPiles
 from ravens.tasks.task import Task
 from ravens.tasks.towers_of_hanoi import TowersOfHanoi
-from ravens.tasks.excavation import Excavation
+from ravens.tasks.auto_excavation import AutoExcavation
 
 names = {
     'align-box-corner': AlignBoxCorner,
     'assembling-kits': AssemblingKits,
     'assembling-kits-easy': AssemblingKitsEasy,
+    'auto-excavation': AutoExcavation,
     'block-insertion': BlockInsertion,
     'block-insertion-easy': BlockInsertionEasy,
     'block-insertion-nofixture': BlockInsertionNoFixture,
@@ -48,7 +49,5 @@ names = {
     'place-red-in-green': PlaceRedInGreen,
     'stack-block-pyramid': StackBlockPyramid,
     'sweeping-piles': SweepingPiles,
-#    'towers-of-hanoi': Excavation,
-    'towers-of-hanoi': TowersOfHanoi,
-    'excavation' : Excavation
+    'towers-of-hanoi': TowersOfHanoi
 }

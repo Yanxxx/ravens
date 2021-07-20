@@ -26,6 +26,7 @@ import numpy as np
 from transforms3d import euler
 
 import pybullet as p
+import time
 
 #-----------------------------------------------------------------------------
 # HEIGHTMAP UTILS
@@ -216,6 +217,7 @@ def unproject_depth_vectorized(im_depth, depth_dist,
 def sample_distribution(prob, n_samples=1):
   """Sample data point from a custom distribution."""
   flat_prob = prob.flatten() / np.sum(prob)
+#  np.random.seed(int(time.time()))
   rand_ind = np.random.choice(
       np.arange(len(flat_prob)), n_samples, p=flat_prob, replace=False)
   rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
