@@ -1,1 +1,10 @@
 /venv/
+build/
+block-insertion-test/
+ravens.egg-info/
+ravens/__pycache__
+ravens/tasks/__pycache__
+ravens/models/__pycache__
+ravens/environments/__pycache__
+ravens/agents/__pycache__
+ravens/utils/__pycache__
