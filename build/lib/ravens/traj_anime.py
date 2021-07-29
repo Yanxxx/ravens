@@ -105,6 +105,7 @@ def main(unused_argv):
       
       env.add_line(line,[210/255.0,105/255.0,30/255.0])
       env.add_line_points(line, [0,100/255.0,0], 9)
+      input("Press Enter to continue...")
       for a in actions:
           obs, r, done, info = env.step_move(a)
           

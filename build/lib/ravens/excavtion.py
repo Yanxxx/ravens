@@ -47,6 +47,18 @@ flags.DEFINE_integer('n', 1000, '')
 FLAGS = flags.FLAGS
 
 
+homej = [-1, -0.5, 0.5, -0.5, -0.5, 0]
+def val2robot(val):
+    targ_j = None
+    if len(val) == 6:
+        targ_j = np.array(homej) + np.array(val)
+        targ_j *= np.pi
+    if len(val) == 7:
+        targ_pos = val[:3]
+        targ_pose = val[3:]
+        targ_j = (targ_pos, targ_pose)
+    return targ_j
+
 def main(unused_argv):
 
   # Initialize environment and task.
@@ -74,11 +86,26 @@ def main(unused_argv):
   seed += 2
   np.random.seed(seed)
   env.set_task(task)
-  env.reset()
+  obs, blocks, targ_pose = env.reset()
 #  obs = env.reset()
-  input('wait for the end of current setup')
+  act = {}
+  while True:
+      print('wait for the end of current setup')
+      x = input().split(',')
+      if len(x) < 6:
+          if x[0] == 'b':
+              break
+          continue
+      val = [float(x[i]) for i in range(len(x))]
+      targ = val2robot(val)
+      if len(x) == 6:
+          env.movej(targ)
+      if len(x) == 7:
+          act['pose'] = targ
+          act['grasp'] = [0, 0]
+          env.step_move(act)
   
-
+#homej = np.array([-1, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
 
 if __name__ == '__main__':
   app.run(main)

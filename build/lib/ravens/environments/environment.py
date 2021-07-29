@@ -299,6 +299,17 @@ class Environment(gym.Env):
   #obs = None
     return obs, reward, done, info
 
+  def step_move_ex(self, action=None):
+    if not action:
+      return None, None, None, None
+    trace = Trace()
+    self.episode_steps += 1
+    timeout, pose = trace(self.movej, self.movep, self.ee, action)
+    p.stepSimulation()
+    obs = self._get_obs()
+    return obs
+      
+
   def add_line(self, line=None, color=[1,0,0], lw=3):
       if not line:
           return
@@ -353,7 +364,7 @@ class Environment(gym.Env):
                          lifeTime=1,
                          lineWidth=3)
     else:
-      self.movj_speed_control(self.joint_space_cmd, speed=0.1)
+      self.movj_speed_control(self.joint_space_cmd, speed=0.2)
 
 
       #while not self.is_static:
@@ -552,7 +563,9 @@ class Environment(gym.Env):
 
   def movep(self, pose, speed=0.02):
     """Move UR5 to target end effector pose."""
+#    print('solve ik')
     targj = self.solve_ik(pose)
+#    print('ik solved')
     return self.movej(targj, speed)
 
   def solve_ik(self, pose):

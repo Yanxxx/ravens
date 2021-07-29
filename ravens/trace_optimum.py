@@ -82,7 +82,7 @@ def main(unused_argv):
 
   trace_generator = TraceGenerator()
   
-
+  seed += 2
   # Collect training data from oracle demonstrations.
   while dataset.n_episodes < FLAGS.n:
     print(f'Oracle demonstration: {dataset.n_episodes + 1}/{FLAGS.n}')
@@ -103,16 +103,13 @@ def main(unused_argv):
 #      input("Press Enter to continue...")
       env.load_env(blocks, pose)
       
-      env.add_line(line,[210/255.0,105/255.0,30/255.0])
-      env.add_line_points(line, [0,100/255.0,0], 9)
       input("Press Enter to continue...")
-      for a in actions:
-          obs, r, done, info = env.step_move(a)
+#      env.add_line(line,[210/255.0,105/255.0,30/255.0])
+#      env.add_line_points(line, [0,100/255.0,0], 9)
           
-      input("Press Enter to continue...")
-      env.load_env(blocks, pose)
-      env.add_line(line,[210/255.0,105/255.0,30/255.0])
-      env.add_line_points(line, [0,100/255.0,0], 9)
+#      env.load_env(blocks, pose)
+#      env.add_line(line,[210/255.0,105/255.0,30/255.0])
+#      env.add_line_points(line, [0,100/255.0,0], 9)
 #      input("Press Enter to continue...")
       flag = True
       kp1 = []
@@ -126,15 +123,15 @@ def main(unused_argv):
       preced = preced + cur
 #          env.add_line_points(line, [0,1,0], 9)
       if flag:
-          kp1 = preced[28]
-          kp2 = preced[29]
-          kp3 = preced[73]
+          kp1 = preced[26]
+          kp2 = preced[28]
+          kp3 = preced[75]
           kp4 = preced[77]
           kp5 = preced[93]
           flag = False
       jump += 1
-      pl = getline(preced)
-      env.add_line_points(pl, [124/255.0,252/255.0,0], 16, 0.3, 2)
+#      pl = getline(preced)
+#      env.add_line_points(pl, [124/255.0,252/255.0,0], 16, 0.3, 2)
       
       k1 = getline([kp1])
       k2 = getline([kp2])
@@ -146,9 +143,17 @@ def main(unused_argv):
       env.add_line_points(k3, [1,1,0], 60, 0, 2)
       env.add_line_points(k4, [1,1,0], 60, 0, 2)
       env.add_line_points(k5, [1,1,0], 60, 0, 2)
-      opa = [kp1, kp2, kp3, kp4, kp5]
-      for a in opa:
-        obs, r, done, info = env.step_move(a)
+#      opa = [kp1, kp2, kp3, kp4, kp5]
+      
+      input("Press Enter to continue...")
+      
+      actions = trace_generator.optim(act)
+      line = getline(actions)
+      env.add_line(line,[210/255.0,105/255.0,30/255.0])
+      for a in actions:
+          obs, r, done, info = env.step_move(a)
+#      for a in opa:
+#        obs, r, done, info = env.step_move(a)
 #          cl = getline(cur)
 #          env.add_line_points(cl, [1,0,0], 40, 2, 2)
       input("Press Enter to continue...")

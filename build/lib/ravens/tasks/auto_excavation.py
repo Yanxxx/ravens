@@ -38,7 +38,7 @@ class AutoExcavation(Task):
     super().__init__()
     self.ee = Bucket
     self.max_steps = 20
-    self.primitive = primitives.push
+    self.primitive = primitives.Excavation
 
   def reset(self, env):
     super().reset(env)
@@ -47,28 +47,30 @@ class AutoExcavation(Task):
     blocks = {}
     zone_size = (0.12, 0.12, 0)
 #    tray_size = (0.5,0,-0.65)
-    tray_pose = ([0.5 , 0 , 0], [0,0,0,1])#self.get_random_pose(env, zone_size)
-    env.add_object("tray/traybox.urdf", tray_pose, 'fixed',scale=0.25)
+    tray_pose = ([0.5 , 0 , 0.1], [0,0,0,1])#self.get_random_pose(env, zone_size)
+    env.add_object("tray/traybox.urdf", tray_pose, 'fixed',scale=0.4)
+    self.env = env
 #    env.add_object("container/container-template.urdf", tray_pose, 'fixed')
 
     # Add pile of small blocks.
     obj_pts = {}
     obj_ids = []
-    obj_num = 60
-    rc = 5
+    obj_num = 100
+    rc = 7
     for count in range(obj_num):
 #      rx = self.bounds[0, 0] + 0.15 + np.random.rand() * 0.2
 #      ry = self.bounds[1, 0] + 0.40 + np.random.rand() * 0.2
 #      xyz = (rx, ry, 0.02)
       
-      rx = self.bounds[0, 0] + 0.2 + (count % rc) * 0.01
-      ry = self.bounds[1, 0] + 0.5 + ((count % rc**2) // rc) * 0.01
-      rz = 0.02 * (count // (rc ** 2))
+      rx = 0.45 + (count % rc) * 0.022
+      ry = -0.05 + ((count % rc**2) // rc) * 0.022
+      rz = 0.022 * (count // (rc ** 2)) + 0.011 + 0.1
       xyz = (rx, ry, rz)
       theta = np.random.rand() * 2 * np.pi
       xyzw = utils.eulerXYZ_to_quatXYZW((0, 0, theta))
-#      obj_id = env.add_object('sphere/sphere.urdf', (xyz, xyzw)) #block/small.urdf
-      obj_id = env.add_object('block/small.urdf', (xyz, xyzw)) #block/small.urdf
+      obj_id = env.add_object('sphere/sphere.urdf', (xyz, xyzw))
+#              ,category='rigid', scale=0.75) #block/small.urdf
+#      obj_id = env.add_object('block/small.urdf', (xyz, xyzw)) #block/small.urdf
 #      obj_id = env.add_object('box/box-template.urdf', (xyz, xyzw)) #block/small.urdf
       obj_pts[obj_id] = self.get_object_points(obj_id)
       blocks[obj_id] = [xyz, xyzw]
@@ -80,9 +82,17 @@ class AutoExcavation(Task):
     # self.goals.append((goal, metric))
     self.goals.append((obj_ids, np.ones((obj_num, 1)), [tray_pose], True, False,
                        'zone', (obj_pts, [(tray_pose, zone_size)]), 1))
-    
     for i in range(10):
 #      print(i)
       p.stepSimulation()
+    accum = 0
+    while not self.env.is_static:
+        p.stepSimulation()
+        accum += 1
+        if accum > 300:
+            break
+#    for i in range(500):
+##      print(i)
+#      p.stepSimulation()
     print('auto excavation finished.')
     return blocks, tray_pose

@@ -14,6 +14,7 @@ ravens/sampling_3_poses.py
 ravens/sampling_data_agent.py
 ravens/test.py
 ravens/trace_generator.py
+ravens/trace_optimum.py
 ravens/train.py
 ravens/traj_anime.py
 ravens.egg-info/PKG-INFO
